@@ -63,9 +63,9 @@ while True:
         break
 print "appleposition", x, y, z
 app_x = x
-tate = 0.2 * math.tan(0.5)
+tate = 0.1 * math.tan(0.5)
 app_y = y+tate
-app_z = z-0.2
+app_z = z-0.1
 
 t = TFP()
 t.start()
@@ -94,7 +94,6 @@ pointstamped.point.y = relative_p.transform.translation.y
 pointstamped.point.z = relative_p.transform.translation.z
 
 print '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
-#movestamped = tfBuffer.transform(pointstamped , "base_footprint" , timeout = rospy.Duration(5))
 
 #print movestamped
 time.sleep(1)
@@ -110,27 +109,37 @@ state = navclient.get_state()
 
 print 'moved'
 
+add_collision_scene(frame_id='map_example')
+print 'addcollision'
 move_hand(1)
 while not rospy.is_shutdown():
     result = move_wholebody_ik(map_x, map_y, map_z, -90, 0, -90, 'map')
     print result
     if result == True:
         break
+time.sleep(2)
+# pose = PointStamped()
+# pose.header.frame_id = "hand_palm_link"
+# pose.header.stamp = rospy.Time.now()
+# pose.point.x = 0
+# pose.point.y = 0
+# pose.point.z = 0.3
+# movestamped = tfBuffer.transform(pointstamped , "base_footprint" , timeout = rospy.Duration(5))
+# print movestamped
+
+goal = MoveBaseGoal()
+goal.target_pose.header.frame_id = "base_footprint"
+goal.target_pose.pose.position.x = 0.2
+goal.target_pose.pose.position.y = 0
+goal.target_pose.pose.position.z = 0
+goal.target_pose.pose.orientation = quaternion_from_euler(0, 0, 0)
+navclient.send_goal(goal)
+navclient.wait_for_result()
+state = navclient.get_state()
+print 'approach', state
 time.sleep(1)
-
-# goal = MoveBaseGoal()
-# goal.target_pose.header.frame_id = "base_footprint"
-# goal.target_pose.pose.position.x = 0.25
-# goal.target_pose.pose.position.y = 0
-# goal.target_pose.pose.orientation = quaternion_from_euler(0, 0, 0)
-# navclient.send_goal(goal)
-# navclient.wait_for_result()
-# state = navclient.get_state()
-
-# time.sleep(1)
-
-# move_hand(0)
-# move_arm_init()
+move_hand(0)
+move_arm_init()
 
 # cv2.imshow('a', region)
 # cv2.waitKey()

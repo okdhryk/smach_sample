@@ -199,6 +199,23 @@ def get_relative_coordinate2(parent, child):
 
     return trans
 
+scene = moveit_commander.PlanningSceneInterface()
+from geometry_msgs.msg import PoseStamped
+def add_collision_scene(frame_id='base_footprint'):
+    box_pose = PoseStamped()
+    box_pose.header.frame_id = frame_id
+    box_pose.pose.position.y = 0.3
+    box_pose.pose.orientation.w = 1.0
+    box_name = "box"
+    scene.add_box(box_name, box_pose, size=(1, 0.1, 1))
+    
+    box_pose2 = PoseStamped()
+    box_pose2.header.frame_id = frame_id
+    box_pose2.pose.position.y = -0.3
+    box_pose2.pose.orientation.w = 1.0
+    box_name2 = "box2"
+    scene.add_box(box_name2, box_pose2, size=(1, 0.1, 1))
+
 
 # moveitでの制御対象として全身制御を指定
 whole_body = moveit_commander.MoveGroupCommander("whole_body_light")

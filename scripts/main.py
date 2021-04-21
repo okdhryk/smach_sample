@@ -6,8 +6,7 @@ import tf
 import smach
 from smach_ros import SimpleActionState
 
-#from move_base_msgs.msg import MoveBaseGoal
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from move_base_msgs.msg import MoveBaseGoal
 
 from utils import *
 
