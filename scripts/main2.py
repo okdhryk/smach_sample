@@ -176,11 +176,44 @@ def construct_sm():
                     navclient.send_goal(goal)
                     navclient.wait_for_result()
                     state = navclient.get_state()
-                    time.sleep(1000000000000)
                     
                     return 'success'
                 
                 smach.StateMachine.add('MOVE2CENTER', smach.CBState(move_to_center_cb), 
+                                       transitions = {'success':'GRASPOBJECT'})
+                
+                @smach.cb_interface(outcomes=['success'])
+                def grasp_object_cb(ud):
+                    add_collision_scene(frame_id='map_approach_p')
+                    move_hand(1)
+                    while not rospy.is_shutdown():
+                        trans = get_relative_coordinate("map", "approach_p")
+                        result = move_wholebody_ik(trans.translation.x,
+                                                   trans.translation.y,
+                                                   trans.translation.z, -90, 0, -90, 'map')
+                        print result
+                        if result == True:
+                            break
+                    time.sleep(2)
+
+                    goal = MoveBaseGoal()
+                    goal.target_pose.header.frame_id = "base_footprint"
+                    goal.target_pose.pose.position.x = 0.2
+                    goal.target_pose.pose.position.y = 0
+                    goal.target_pose.pose.position.z = 0
+                    goal.target_pose.pose.orientation = quaternion_from_euler(0, 0, 0)
+                    navclient.send_goal(goal)
+                    navclient.wait_for_result()
+                    state = navclient.get_state()
+                    print 'nav_state', state
+                    time.sleep(1)
+                    move_hand(0)
+                    move_arm_init()
+
+                    time.sleep(100000000000000000)
+                    return 'success'
+
+                smach.StateMachine.add('GRASPOBJECT', smach.CBState(grasp_object_cb), 
                                        transitions = {'success':'Move2Origin'})
 
                 goal = MoveBaseGoal()
