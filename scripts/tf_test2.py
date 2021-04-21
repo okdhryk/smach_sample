@@ -26,23 +26,25 @@ app_x, app_y, app_z = 0,0,0
 class TFP(threading.Thread):
     def run(self):
         while not rospy.is_shutdown():
+            #apple posiiont tf
             rgbd._br.sendTransform(
                 (x, y, z), tf.transformations.quaternion_from_euler(0.5, 0, 0),
                 rospy.Time.now(),
                 'example',
                 'head_rgbd_sensor_rgb_frame')
+            #applepostion back to 0.1
             rgbd._br.sendTransform(
                 (app_x, app_y, app_z), tf.transformations.quaternion_from_euler(0.5, 0, 0),
                 rospy.Time.now(),
                 'example2',
                 'head_rgbd_sensor_rgb_frame')
-            
+            #map frame position from behind apple
             rgbd._br.sendTransform(
                 (map_x, map_y, map_z), tf.transformations.quaternion_from_euler(-1.57, -1.57, 0),
                 rospy.Time.now(),
                 'map_example',
                 'map')
-
+            # map origin dont need
             rgbd._br.sendTransform(
                 (map_x, map_y, map_z), tf.transformations.quaternion_from_euler(0, 0, 0),
                 rospy.Time.now(),
