@@ -6,7 +6,7 @@ import time
 
 import smach
 from smach_ros import SimpleActionState, ConditionState, IntrospectionServer
-from dynamic_reconfigure.client
+import dynamic_reconfigure.client
 
 from move_base_msgs.msg import MoveBaseGoal
 rospy.init_node("smach_test")
@@ -47,6 +47,19 @@ class TFBroadCaster:
         self.yaw.append(yaw)
         self.to_tf.append(to_tf)
         self.from_tf.append(from_tf)
+
+class UpdateObstacle(smach.State):
+    def __init__(self, max_obstacle_height):
+        smach.State.__init__(self, outcomes=['success'])
+        self.max_obstacle_height = max_obstacle_height
+    def execute(self, userdata):
+        client = dynamic_reconfigure.client.Client('/move_base/local_costmap/obstacles',
+                                                   timeout=30)
+        client.update_configuration({"max_obstacle_height":self.max_obstacle_height})
+        rospy.loginfo('update dynamic_reconfigure')
+
+        return 'success'
+
 
 class FindApple(smach.State):
     def __init__(self):
@@ -110,6 +123,9 @@ def construct_sm():
             container_sm = smach.StateMachine(input_keys = ['tf_x', 'tf_y', 'tf_z',],
                                               outcomes = ['continue', 'failure'])
             with container_sm:
+
+                smach.StateMachine.add('NAVOBSTACLE', UpdateObstacle(0.5),
+                                       transitions = {'success':'Move2Shelf'})
                 
                 goal = MoveBaseGoal()
                 goal.target_pose.header.stamp = rospy.Time.now()
@@ -158,6 +174,9 @@ def construct_sm():
                     return 'success'
                 
                 smach.StateMachine.add('BROADCASTTF', smach.CBState(broadcast_tf_cb), 
+                                       transitions = {'success':'GRASPOBSTACLE'})
+                
+                smach.StateMachine.add('GRASPOBSTACLE', UpdateObstacle(0),
                                        transitions = {'success':'MOVE2CENTER'})
 
                 @smach.cb_interface(outcomes=['success'])
@@ -186,7 +205,8 @@ def construct_sm():
                 @smach.cb_interface(outcomes=['success'])
                 def grasp_object_cb(ud):
                     add_collision_scene(frame_id='map_approach_p')
-                    move_hand(1)
+                    result = move_hand(1)
+                    print "hand close result is ", result
                     while not rospy.is_shutdown():
                         # trans = get_relative_coordinate("map", "approach_p")
                         trans = get_relative_coordinate("map", "map_approach_p")
@@ -205,6 +225,11 @@ def construct_sm():
                     goal.target_pose.pose.position.y = 0
                     goal.target_pose.pose.position.z = 0
                     goal.target_pose.pose.orientation = quaternion_from_euler(0, 0, 0)
+                    # goal.target_pose.header.frame_id = "hand_palm_link"
+                    # goal.target_pose.pose.position.x = 0.15
+                    # goal.target_pose.pose.position.y = 0
+                    # goal.target_pose.pose.position.z = 0
+                    # goal.target_pose.pose.orientation = quaternion_from_euler(0, 0, 0)
                     navclient.send_goal(goal)
                     navclient.wait_for_result()
                     state = navclient.get_state()
@@ -212,12 +237,25 @@ def construct_sm():
                     time.sleep(3)
                     move_hand(0)
                     time.sleep(3)
-                    move_arm_init()
+
+                    goal.target_pose.pose.position.x = -1
+                    navclient.send_goal(goal)
+                    navclient.wait_for_result()
+                    state = navclient.get_state()
+                    print 'back nav_state', state
+                    
+                    while not rospy.is_shutdown():
+                        result = move_arm_init()
+                        if result is True:
+                            break
                     print 'move to arm init position !!!!!!!!!!'
                     
                     return 'success'
 
                 smach.StateMachine.add('GRASPOBJECT', smach.CBState(grasp_object_cb), 
+                                       transitions = {'success':'ORIGINOBSTACLE'})
+                
+                smach.StateMachine.add('ORIGINOBSTACLE', UpdateObstacle(0.5),
                                        transitions = {'success':'Move2Origin'})
 
                 goal = MoveBaseGoal()
@@ -234,11 +272,19 @@ def construct_sm():
                 print goal
                 smach.StateMachine.add('Move2Origin',
                                        SimpleActionState('/move_base', MoveBaseAction, goal=goal),
-                                       transitions={'succeeded':'continue',
+                                       transitions={'succeeded':'OPENGRIPPER',
                                                     'preempted':'failure',
                                                     'aborted':'failure'})
+                
+                @smach.cb_interface(outcomes=['success'])
+                def open_gripper_cb(ud):
+                    result =  move_hand(1)
+                    rospy.loginfo("Gripper open result is" + str(result))
+                    return 'success'
 
-
+                smach.StateMachine.add('OPENGRIPPER', smach.CBState(open_gripper_cb), 
+                                       transitions = {'success':'continue'})
+                
             smach.Iterator.set_contained_state('CONTAINER_STATE', 
                                                container_sm, 
                                                loop_outcomes=['continue', 'failure'])
