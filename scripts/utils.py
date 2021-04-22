@@ -205,16 +205,16 @@ def add_collision_scene(frame_id='base_footprint'):
     box_pose = PoseStamped()
     box_pose.header.frame_id = frame_id
     box_pose.pose.position.y = 0.3
-    box_pose.pose.orientation.w = 0.7
+    box_pose.pose.orientation.w = 1
     box_name = "box"
-    scene.add_box(box_name, box_pose, size=(1, 0.1, 1))
+    scene.add_box(box_name, box_pose, size=(0.8, 0.1, 0.8))
     
     box_pose2 = PoseStamped()
     box_pose2.header.frame_id = frame_id
     box_pose2.pose.position.y = -0.3
-    box_pose2.pose.orientation.w = 0.7
+    box_pose2.pose.orientation.w = 1
     box_name2 = "box2"
-    scene.add_box(box_name2, box_pose2, size=(1, 0.1, 1))
+    scene.add_box(box_name2, box_pose2, size=(0.8, 0.1, 0.8))
 
 
 # moveitでの制御対象として全身制御を指定
