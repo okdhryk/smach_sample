@@ -13,7 +13,7 @@ rospy.init_node("smach_test")
 
 from utils import *
 
-rgbd = RGBD()
+#rgbd = RGBD()
 
 class TFBroadCaster:
     def __init__(self):
@@ -26,6 +26,8 @@ class TFBroadCaster:
         self.to_tf = []
         self.from_tf = []
 
+        self._br = tf.TransformBroadcaster()
+
     def loop(self, event):
         if len(self.x) == 0:
             return
@@ -34,7 +36,7 @@ class TFBroadCaster:
                                                              self.pitch, self.yaw,
                                                              self.to_tf, self.from_tf):
             # print x, y, z, roll, pitch, yaw, to_tf, from_tf
-            rgbd._br.sendTransform(
+            self._br.sendTransform(
                 (x, y, z), tf.transformations.quaternion_from_euler(roll, pitch, yaw),
                 rospy.Time.now(), to_tf, from_tf)
 
@@ -48,6 +50,16 @@ class TFBroadCaster:
         self.to_tf.append(to_tf)
         self.from_tf.append(from_tf)
 
+    def clear(self):
+        self.x = []
+        self.y = []
+        self.z = []
+        self.roll = []
+        self.pitch = []
+        self.yaw = []
+        self.to_tf = []
+        self.from_tf = []
+    
 class UpdateObstacle(smach.State):
     def __init__(self, max_obstacle_height):
         smach.State.__init__(self, outcomes=['success'])
@@ -67,11 +79,15 @@ class FindApple(smach.State):
                              input_keys=['tf_x', 'tf_y', 'tf_z'],
                              output_keys=['tf_x', 'tf_y', 'tf_z'])
     def execute(self, userdata):
+        rgbd = RGBD()
         move_head_tilt(-0.5)
         rgbd.set_h(125, 255)
         while not rospy.is_shutdown():
             region = rgbd.get_region()
             x, y, z = rgbd.get_xyz()
+            rospy.logerr(x)
+            rospy.logerr(y)
+            rospy.logerr(z)
             if region is None:
                 rospy.loginfo('waiting for correcto data is comming')
                 continue
@@ -120,7 +136,7 @@ def construct_sm():
                                   exhausted_outcome = 'success')
         with iterator:
             
-            container_sm = smach.StateMachine(input_keys = ['tf_x', 'tf_y', 'tf_z',],
+            container_sm = smach.StateMachine(input_keys = ['tf_x', 'tf_y', 'tf_z', 'index'],
                                               outcomes = ['continue', 'failure'])
             with container_sm:
 
@@ -152,6 +168,16 @@ def construct_sm():
                 @smach.cb_interface(input_keys=['tf_x', 'tf_y', 'tf_z'],
                                     outcomes=['success'])
                 def broadcast_tf_cb(ud):
+                    while not rospy.is_shutdown():
+                        result = move_arm_neutral()
+                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+                        rospy.logerr('move_arm_neutral' + str(result))
+                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+                        if result is True:
+                            break
+                    time.sleep(3)
                     print ud.tf_x, ud.tf_y, ud.tf_z
                     #broadcast head_rgbd_sensor to apple position
                     broadcaster.add(ud.tf_x, ud.tf_y, ud.tf_z, 0.5, 0, 0,
@@ -184,8 +210,8 @@ def construct_sm():
                     rospy.loginfo('enterenterenterenter')
                     while not rospy.is_shutdown():
                         relative_p = get_relative_coordinate2("hand_palm_link", "map_approach_p")
+                        rospy.logerr('bimyouni chousei' + str(relative_p))
                         duration = (rospy.Time.now() - relative_p.header.stamp).to_sec()
-                        print 'duration', duration
                         if duration < 1:
                             break
                     goal = MoveBaseGoal()
@@ -238,10 +264,7 @@ def construct_sm():
                     move_hand(0)
                     time.sleep(3)
 
-                    goal.target_pose.pose.position.x = -1
-                    navclient.send_goal(goal)
-                    navclient.wait_for_result()
-                    state = navclient.get_state()
+                    move_base_vel(-1, 0, 0)
                     print 'back nav_state', state
                     
                     while not rospy.is_shutdown():
@@ -249,7 +272,7 @@ def construct_sm():
                         if result is True:
                             break
                     print 'move to arm init position !!!!!!!!!!'
-                    
+                    broadcaster.clear()
                     return 'success'
 
                 smach.StateMachine.add('GRASPOBJECT', smach.CBState(grasp_object_cb), 
@@ -280,6 +303,7 @@ def construct_sm():
                 def open_gripper_cb(ud):
                     result =  move_hand(1)
                     rospy.loginfo("Gripper open result is" + str(result))
+                    
                     return 'success'
 
                 smach.StateMachine.add('OPENGRIPPER', smach.CBState(open_gripper_cb), 
