@@ -216,6 +216,9 @@ def add_collision_scene(frame_id='base_footprint'):
     box_name2 = "box2"
     scene.add_box(box_name2, box_pose2, size=(0.8, 0.1, 0.8))
 
+def remove_collision_scene():
+    scene.remove_world_object('box')
+    scene.remove_world_object('box2')
 
 # moveitでの制御対象として全身制御を指定
 whole_body = moveit_commander.MoveGroupCommander("whole_body_light")

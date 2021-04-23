@@ -139,6 +139,16 @@ def construct_sm():
             container_sm = smach.StateMachine(input_keys = ['tf_x', 'tf_y', 'tf_z', 'index'],
                                               outcomes = ['continue', 'failure'])
             with container_sm:
+                
+                @smach.cb_interface(outcomes=['success'])
+                def put_object_cb(ud):
+                    delete_object('apple')
+                    put_object('apple', 2.2, 4.75, 0.5)
+                    return 'success'
+
+                smach.StateMachine.add('PUTOBJECT', smach.CBState(put_object_cb),
+                                       transitions = {'success':'NAVOBSTACLE'})
+                
 
                 smach.StateMachine.add('NAVOBSTACLE', UpdateObstacle(0.5),
                                        transitions = {'success':'Move2Shelf'})
@@ -168,6 +178,7 @@ def construct_sm():
                 @smach.cb_interface(input_keys=['tf_x', 'tf_y', 'tf_z'],
                                     outcomes=['success'])
                 def broadcast_tf_cb(ud):
+                    print 'remove collision scene'
                     while not rospy.is_shutdown():
                         result = move_arm_neutral()
                         print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
@@ -267,6 +278,8 @@ def construct_sm():
                     move_base_vel(-1, 0, 0)
                     print 'back nav_state', state
                     
+                    remove_collision_scene()
+
                     while not rospy.is_shutdown():
                         result = move_arm_init()
                         if result is True:
@@ -303,10 +316,17 @@ def construct_sm():
                 def open_gripper_cb(ud):
                     result =  move_hand(1)
                     rospy.loginfo("Gripper open result is" + str(result))
-                    
                     return 'success'
 
                 smach.StateMachine.add('OPENGRIPPER', smach.CBState(open_gripper_cb), 
+                                       transitions = {'success':'DELETEOBJECT'})
+
+                @smach.cb_interface(outcomes=['success'])
+                def delete_object_cb(ud):
+                    delete_object('apple')
+                    return 'success'
+
+                smach.StateMachine.add('DELETEOBJECT', smach.CBState(delete_object_cb),
                                        transitions = {'success':'continue'})
                 
             smach.Iterator.set_contained_state('CONTAINER_STATE', 
