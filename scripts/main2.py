@@ -15,6 +15,21 @@ from utils import *
 
 #rgbd = RGBD()
 
+
+class CheckGrasp(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['success', 'failure'])
+        self.closed_distance = 0.07
+        
+    def execute(self, userdata):
+        trans = tfBuffer.lookup_transform('hand_l_distal_link', 'hand_r_distal_link',
+                                          rospy.Time.now(), rospy.Duration(4.0))
+
+        if trans.transform.translation.y > self.closed_distance:
+            return 'success'
+        else:
+            return 'failure'
+
 class TFBroadCaster:
     def __init__(self):
         self.x = []
@@ -289,7 +304,13 @@ def construct_sm():
                     return 'success'
 
                 smach.StateMachine.add('GRASPOBJECT', smach.CBState(grasp_object_cb), 
-                                       transitions = {'success':'ORIGINOBSTACLE'})
+                                       transitions = {'success':'CHECKGRASP'})
+
+
+                smach.StateMachine.add('CHECKGRASP', CheckGrasp(),
+                                       transitions={'success':'ORIGINOBSTACLE',
+                                                    'failure':'Move2Shelf'})
+
                 
                 smach.StateMachine.add('ORIGINOBSTACLE', UpdateObstacle(0.5),
                                        transitions = {'success':'Move2Origin'})
