@@ -193,7 +193,7 @@ def construct_sm():
                         result = move_arm_neutral()
                         if result is True:
                             break
-                    time.sleep(3)
+                    #time.sleep(3)
                     #broadcast head_rgbd_sensor to apple position
                     broadcaster.add(ud.tf_x, ud.tf_y, ud.tf_z, 0.5, 0, 0,
                                     'apple', 'head_rgbd_sensor_rgb_frame')
@@ -257,7 +257,7 @@ def construct_sm():
                                                    trans.translation.z, -90, 0, -90, 'map')
                         if result == True:
                             break
-                    time.sleep(2)
+                    #time.sleep(2)
 
                     goal = MoveBaseGoal()
                     goal.target_pose.header.frame_id = "base_footprint"
@@ -273,9 +273,9 @@ def construct_sm():
                     navclient.send_goal(goal)
                     navclient.wait_for_result()
                     state = navclient.get_state()
-                    time.sleep(3)
+                    #time.sleep(3)
                     move_hand(0)
-                    time.sleep(3)
+                    #time.sleep(3)
                     
                     move_base_vel(-1, 0, 0)
                     
