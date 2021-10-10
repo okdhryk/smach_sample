@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import time
 import rospy
@@ -12,10 +12,10 @@ del_model = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
 data = rospy.wait_for_message('/gazebo/model_states', ModelStates)
 print("get model states")
 data = [d for d in data.name if 'task' in d]
-print data, len(data)
+print (data, len(data))
 
 for name in data:
-    print name
+    print(name)
     time.sleep(1)
     del_model(name)
         
